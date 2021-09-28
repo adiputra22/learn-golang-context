@@ -119,3 +119,49 @@ func TestContextWithCancel(t *testing.T) {
 
 	fmt.Println("Total goroutine after cancel signal event:", runtime.NumGoroutine())
 }
+
+func CreateCounterSlow(ctx context.Context) chan int {
+	destination := make(chan int)
+
+	go func() {
+		defer close(destination)
+		counter := 1
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				destination <- counter
+				counter++
+
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}()
+
+	return destination
+}
+
+func TestContextWithTimeout(t *testing.T) {
+	fmt.Println("Total goroutine start:", runtime.NumGoroutine())
+
+	parent := context.Background()
+
+	// timeoutTime := 5 * time.Second
+	timeoutTime := 10 * time.Second
+
+	ctx, cancel := context.WithTimeout(parent, timeoutTime)
+	defer cancel() // keep call cancel for automatic stop go routine less than 5 second of timeout
+
+	destination := CreateCounterSlow(ctx)
+
+	fmt.Println("Total goroutine after call goroutine:", runtime.NumGoroutine())
+
+	for n := range destination {
+		fmt.Println("Counter", n)
+	}
+
+	time.Sleep(2 * time.Second)
+
+	fmt.Println("Total goroutine after cancel signal event:", runtime.NumGoroutine())
+}
