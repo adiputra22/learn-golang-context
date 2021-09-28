@@ -165,3 +165,27 @@ func TestContextWithTimeout(t *testing.T) {
 
 	fmt.Println("Total goroutine after cancel signal event:", runtime.NumGoroutine())
 }
+
+func TestContextWithDeadline(t *testing.T) {
+	fmt.Println("Total goroutine start:", runtime.NumGoroutine())
+
+	parent := context.Background()
+
+	timeoutTime := 5 * time.Second
+	deadlineTime := time.Now().Add(timeoutTime)
+
+	ctx, cancel := context.WithDeadline(parent, deadlineTime)
+	defer cancel() // keep call cancel for automatic stop go routine less than 5 second of timeout
+
+	destination := CreateCounterSlow(ctx)
+
+	fmt.Println("Total goroutine after call goroutine:", runtime.NumGoroutine())
+
+	for n := range destination {
+		fmt.Println("Counter", n)
+	}
+
+	time.Sleep(2 * time.Second)
+
+	fmt.Println("Total goroutine after cancel signal event:", runtime.NumGoroutine())
+}
